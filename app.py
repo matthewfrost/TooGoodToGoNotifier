@@ -2,6 +2,7 @@ from tgtg import TgtgClient
 import requests
 import time
 import configparser
+import sqlite3
 
 class Bag:
     def __init__(self, location, availableBags):
@@ -11,14 +12,21 @@ class Bag:
     def __str__(self):
         return "Location: {location} \nAvailable bags: {count}\n".format(location=self.location, count=self.availableBags)
 
+con = sqlite3.connect("base.db")
+cursor = con.cursor()
+
+cursor.execute('''CREATE TABLE bags'
+                    (store_id INTEGER, store_name TEXT, available_bags INTEGER)''')
 config = configparser.ConfigParser()
 config.read("config.env")
 
 tgtgSettings = config["Too good to go"]
+telegramSettings = config["Telegram"]
+locationSettings = config["Location"]
 
 client = TgtgClient(email=tgtgSettings["email"], password=tgtgSettings["password"])
-bot_token=config["Telegram"]["botToken"]
-chat_id=config["Telegram"]["chatId"]
+bot_token=telegramSettings["botToken"]
+chat_id=telegramSettings["chatId"]
 
 sentObjects = []
 while True: 
@@ -28,9 +36,9 @@ while True:
 
     response = client.get_items(
         favorites_only=True,
-        latitude=config["Location"]["latitude"],
-        longitude=config["Location"]["longitude"],
-        radius=config["Location"]["radius"],
+        latitude=locationSettings["latitude"],
+        longitude=locationSettings["longitude"],
+        radius=locationSettings["radius"],
     )
 
     #reading the response and adding to list
