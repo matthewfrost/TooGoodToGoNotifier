@@ -27,17 +27,17 @@ def init_db():
     return cursor
 
 def init_tgtg():
-    if not "access_token" in os.enivron:
+    if not config["Too good to go"]["access_token"]:
         client = TgtgClient(email=os.environ["email"])
         client.get_credentials()
     else:
-        client = TgtgClient(access_token=os.enivron["access_token"], refresh_token=os.enivron["refresh_token"], user_id=os.enivron["user_id"])
+        client = TgtgClient(access_token=config["Too good to go"]["access_token"], refresh_token=config["Too good to go"]["refresh_token"], user_id=config["Too good to go"]["user_id"])
     
-    os.enivron["access_token"] = client.access_token
-    os.enivron["refresh_token"] = client.refresh_token
-    os.enivron["user_id"] = client.user_id
-    # with open("config.env", "w") as configFile:
-    #     config.write(configFile)
+    config["Too good to go"]["access_token"] = client.access_token
+    config["Too good to go"]["refresh_token"] = client.refresh_token
+    config["Too good to go"]["user_id"] = client.user_id
+    with open("config.env", "w") as configFile:
+        config.write(configFile)
     return client
 
 def get_saved_bags(cursor):
@@ -63,12 +63,12 @@ def remove_old_bags(cursor, saved_bags, new_bags):
 
     return list(set(bagsToRemove).difference(set(saved_bags)))
 
-def get_new_bags(tgtgClient):
+def get_new_bags(tgtgClient, locationSettings):
     response = tgtgClient.get_items(
         favorites_only=True,
-        latitude=os.environ["latitude"],
-        longitude=os.environ["longitude"],
-        radius=os.environ["radius"],
+        latitude=config["Location"]["latitude"],
+        longitude=config["Location"]["longitude"],
+        radius=config["Location"]["radius"],
     )
 
     newBags = []
@@ -83,8 +83,8 @@ def get_new_bags(tgtgClient):
 
 def send_telegram_message(bags):
     telegramSettings = config["Telegram"]
-    bot_token=os.environ["bottoken"]
-    chat_id=os.environ["chatid"]
+    bot_token=telegramSettings["bottoken"]
+    chat_id=telegramSettings["chatid"]
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     params = {
         "chat_id": chat_id,
@@ -98,9 +98,9 @@ def send_telegram_message(bags):
 
 cursor = init_db()
 
-#tgtgSettings = config["Too good to go"]
+tgtgSettings = config["Too good to go"]
 
-#locationSettings = config["Location"]
+locationSettings = config["Location"]
 
 client = init_tgtg()
 
@@ -110,7 +110,7 @@ print("Getting bags")
 
 objectsToSend = [] 
 
-newBags = get_new_bags(client)
+newBags = get_new_bags(client, locationSettings)
 existingBags = get_saved_bags(cursor)
 newBags = remove_old_bags(cursor, existingBags, newBags)
 
